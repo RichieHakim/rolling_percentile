@@ -64,6 +64,14 @@ def rolling_percentile(x_in, win_len, ptile):
     return out_ptile
 
 
+def initialize_rp():
+    '''
+    Just a simple little function for running minimal input to get
+    the 'rolling_percentile' function to jit compile
+    '''
+    rolling_percentile(np.random.rand(11,11), win_len=3, ptile=50);
+
+
 @njit
 def bisect_left(arr, val):
     '''
