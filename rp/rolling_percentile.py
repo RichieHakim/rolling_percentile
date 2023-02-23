@@ -13,7 +13,7 @@ class Rolling_percentile_online:
         win_len, 
         n_vals, 
         ptile, 
-        device=torch.device('cpu'),
+        device='cpu',
         dtype=torch.float32,
         x_buffer_init=None,
         use_jit=True,
