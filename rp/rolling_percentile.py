@@ -14,18 +14,18 @@ class Rolling_percentile_online:
         n_vals, 
         ptile, 
         device='cpu',
-        dtype=torch.float32,
         x_buffer_init=None,
         use_jit=True,
+        dtype=torch.float32,
     ):
-        self._dtype = dtype
+        self._dtype = dtype if not isinstance(dtype, str) else getattr(torch, dtype)
         self._device = device
 
-        self._win_len = win_len
+        self._win_len = int(win_len)
         self.ptile = ptile
         self.idx_ptile = int(round(win_len * (ptile/100)))
 
-        if x_buffer_init is None:
+        if x_buffer_init is None or x_buffer_init=='None':
             self.x_buffer = torch.empty((n_vals, win_len), dtype=self._dtype).to(self._device)
             self.x_buffer[:] = torch.inf 
             self.iter = 0
@@ -40,7 +40,7 @@ class Rolling_percentile_online:
 
         self.x_sorted = torch.sort(self.x_buffer, dim=1)[0].contiguous()
 
-        self._use_jit = use_jit
+        self._use_jit = use_jit if use_jit==True else use_jit==1
         self.step_helper = torch.jit.script(_step_helper) if self._use_jit else _step_helper
 
     def step(self, vals_new):
@@ -49,7 +49,7 @@ class Rolling_percentile_online:
         p, self.x_buffer, self.x_sorted, self.iter = self.step_helper(vals_new, self.x_buffer, self.x_sorted, self.arange_arr, self.iter, self._win_len, idx_ptile)
         return p
 
-def _step_helper(vals_new, x_buffer, x_sorted, arange_arr, iter, win_len, idx_ptile):
+def _step_helper(vals_new, x_buffer, x_sorted, arange_arr, iter: int, win_len: int, idx_ptile: int):
     # tic = time.time()
     vals_new[torch.isnan(vals_new)] = torch.inf
     vals_new = vals_new.contiguous()
