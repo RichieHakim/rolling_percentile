@@ -1,5 +1,5 @@
 # from rolling_percentile.rolling_percentile import rolling_percentile, initialize_rp
-from .rolling_percentile import rolling_percentile, initialize_rp
+from .rp.rolling_percentile import rolling_percentile, initialize_rp
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
