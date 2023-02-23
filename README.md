@@ -1,2 +1,2 @@
 # rolling_percentile
-Fast rolling percentile function for python
+Fast online rolling percentile function for Python using PyTorch.
