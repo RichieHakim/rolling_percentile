@@ -10,14 +10,41 @@ class Rolling_percentile_online:
     """
     def __init__(
         self, 
-        win_len, 
-        n_vals, 
-        ptile, 
-        device='cpu',
+        win_len: int, 
+        n_vals: int, 
+        ptile: float, 
+        device: str='cpu',
         x_buffer_init=None,
         use_jit=True,
         dtype=torch.float32,
     ):
+        """
+        Initialize rolling percentile object.
+
+        Args:
+            win_len (int):
+                Window length.
+            n_vals (int):
+                Number of values to calculate percentile for.
+            ptile (float):
+                Percentile to calculate.
+                0-100.
+            device (str):
+                Device to use.
+                'cpu' or 'cuda'.
+            x_buffer_init (torch.Tensor):
+                Initial values for x_buffer.
+                To use, must be of shape (n_vals, win_len).
+                Also make sure to set self.iter to at least win_len
+                 so that it will pull from the prepoluated buffer.
+                If None, will initialize to torch.inf.
+            use_jit (bool):
+                Whether to use torch.jit.script to speed up step function.
+            dtype (str or torch.dtype):
+                Data type to use for self.x_buffer and self.x_sorted.
+                If str, must be a valid torch dtype.
+        """
+
         self._dtype = dtype if not isinstance(dtype, str) else getattr(torch, dtype)
         self._device = device
 
@@ -44,12 +71,52 @@ class Rolling_percentile_online:
         self.step_helper = torch.jit.script(_step_helper) if self._use_jit else _step_helper
 
     def step(self, vals_new):
+        """
+        Stepwise rolling percentile calculation.
+        Wrapper for _step_helper so that it can be jit compiled.
+
+        Args:
+            vals_new (np.ndarray or torch.Tensor):
+                New values to add to rolling percentile calculation.
+                Must be of shape (n_vals,).
+
+        Returns:
+            p (torch.Tensor):
+                Percentile values.
+        """
         vals_new = torch.as_tensor(vals_new, dtype=self._dtype, device=self._device)
         idx_ptile = min(self.idx_ptile, round(self.iter * (self.ptile/100)))
         p, self.x_buffer, self.x_sorted, self.iter = self.step_helper(vals_new, self.x_buffer, self.x_sorted, self.arange_arr, self.iter, self._win_len, idx_ptile)
         return p
 
 def _step_helper(vals_new, x_buffer, x_sorted, arange_arr, iter: int, win_len: int, idx_ptile: int):
+    """
+    Stepwise rolling percentile calculation.
+
+    Args:
+        vals_new (torch.Tensor):
+            New values to add to rolling percentile calculation.
+            Must be of shape (n_vals,).
+        x_buffer (torch.Tensor):
+            Buffer of values.
+            Must be of shape (n_vals, win_len).
+        x_sorted (torch.Tensor):
+            Sorted buffer of values.
+            Must be of shape (n_vals, win_len).
+        arange_arr (torch.Tensor):
+            Array of arange(win_len) for each row.
+            Must be of shape (n_vals, win_len).
+        iter (int):
+            Iteration number.
+        win_len (int):
+            Window length.
+        idx_ptile (int):
+            Index of percentile value.
+
+    Returns:
+        p (torch.Tensor):
+            Percentile values.
+    """
     # tic = time.time()
     vals_new[torch.isnan(vals_new)] = torch.inf
     vals_new = vals_new.contiguous()
