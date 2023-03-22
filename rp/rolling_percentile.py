@@ -88,6 +88,26 @@ class Rolling_percentile_online:
         idx_ptile = min(self.idx_ptile, round(self.iter * (self.ptile/100)))
         p, self.x_buffer, self.x_sorted, self.iter = self.step_helper(vals_new, self.x_buffer, self.x_sorted, self.arange_arr, self.iter, self._win_len, idx_ptile)
         return p
+    
+    def multistep(self, array):
+        """
+        Rolling percentile calculation for array of values.
+
+        Args:
+            array (np.ndarray or torch.Tensor):
+                Values to calculate rolling percentile for.
+                Must be of shape (n_features, n_samples).
+
+        Returns:
+            p (torch.Tensor):
+                Percentile values.
+                Shape (n_features, n_samples).
+        """
+        array = torch.as_tensor(array, dtype=self._dtype, device=self._device)
+        p = torch.empty_like(array)
+        for i in range(array.shape[1]):
+            p[:,i] = self.step(array[:,i])
+        return p
 
 def _step_helper(vals_new, x_buffer, x_sorted, arange_arr, iter: int, win_len: int, idx_ptile: int):
     """
